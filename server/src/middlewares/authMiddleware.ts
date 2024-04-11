@@ -11,7 +11,7 @@ export function checkRoles(roles: string[]) {
     if (!token) {
       return res.status(401).json({ error: "Unauthorized. No token provided!" })
     }
-
+    
     try {
       const payload: any = jwt.verify(token, String(process.env.SECRET_KEY))
 
@@ -19,8 +19,13 @@ export function checkRoles(roles: string[]) {
         return res.status(403).json(
           { error: "Forbidden access. User dosen't have the required role." })
       }
+
+      if (payload.id) {
+        req.user_id = payload.id;
+      }
+
     } catch (error) {
-      return res.status(403).json({ error: "Forbidden access. Invalid token." })
+      return res.status(500).json({ error: "Internal server error." })
     }
 
     next();

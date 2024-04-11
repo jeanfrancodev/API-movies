@@ -14,10 +14,30 @@ const router = Router();
 
 /**
  * @swagger
+ * /auth/users:
+ *   get:
+ *     summary: Get all users
+ *     tags: [Users]
+ *     description: Endpoint requires authentication, access only for user ADMIN.
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       '200':
+ *         description: All Users.
+ *       '500':
+ *         description: Internal Server Error.
+ */
+router.get('/users',  
+    checkRoles(['ADMIN']),
+    UserController.getAllUsers);
+
+/**
+ * @swagger
  * /auth/register:
  *   post:
  *     summary: Create a new user
  *     tags: [Users]
+ *     description: Create a new user according to the json file properties.
  *     requestBody:
  *       required: true
  *       content:
@@ -25,12 +45,18 @@ const router = Router();
  *           schema:
  *             $ref: '#/components/schemas/UserInput'
  *     responses:
- *       201:
- *         description: The user was successfully created
+ *       '201':
+ *         description: The user was successfully created.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/User'
+ *       '400':
+ *         description: User already exists.
+ *       '422':
+ *         description: invalid credentials.
+ *       '500':
+ *         description: Internal Server Error.
  */
 router.post(
     '/register',
@@ -48,8 +74,9 @@ router.post(
  * @swagger
  * /auth/login:
  *   post:
- *     summary: Autenticar usuário
- *     description: Endpoint para autenticar um usuário.
+ *     summary: Login user
+ *     tags: [Users]
+ *     description: Endpoint to authenticate a user.
  *     requestBody:
  *       required: true
  *       content:
@@ -59,14 +86,8 @@ router.post(
  *             properties:
  *               email:
  *                 type: string
- *                 description: E-mail de usuário.
  *               password:
  *                 type: string
- *                 format: password
- *                 description: Senha do usuário.
- *             required:
- *               - email
- *               - password
  *     responses:
  *       '200':
  *         description: User login successfully. 
@@ -76,10 +97,10 @@ router.post(
  *               $ref: '#/components/schemas/User'
  *       '400':
  *         description: Invalid password.
- *       '422':
- *         description: Credenciais inválidas. O usuário não está autorizado.
  *       '404':
- *         description: Usuário não encontrado.
+ *         description: User not found.
+ *       '422':
+ *         description: invalid format credentials.
  *       '500':
  *         description: Internal Server Error.
  */
@@ -92,40 +113,6 @@ router.post(
     ],
     UserController.loginUser
 );
-/**
- * @swagger
- * /auth/users:
- *   get:
- *     summary: Get all users
- *     tags: [Users]
- *     description: Endpoint protegido que requer autenticação.
- *     security:
- *       - ApiKeyAuth: []
- *     responses:
- *       '200':
- *         description: OK
-//  *     components:  
-//  *       securitySchemes:
-//  *         bearerAuth:
-//  *           type: http
-//  *           scheme: bearer
-//  *           bearerFormat: JWT
-//  *     responses:
-//  *       200:
-//  *         description: A list of users
-//  *         content:
-//  *           application/json:
-//  *             schema:
-//  *               type: array
-//  *               items:
-//  *               $ref: '#/components/schemas/User'
-//  *     security:
-//  *       - bearerAuth: []
- */
-router.get('/users',[  
-    checkRoles(['ADMIN'])
-    // .isIn(['ADMIN']).withMessage('Invalid role')
-  ], UserController.getAllUsers);
 
 /**
  * @swagger
@@ -133,6 +120,9 @@ router.get('/users',[
  *   put:
  *     summary: update a user by ID
  *     tags: [Users]
+ *     description: Endpoint requires authentication, access only for user ADMIN
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -147,48 +137,53 @@ router.get('/users',[
  *           schema:
  *             $ref: '#/components/schemas/UserInput'
  *     responses:
- *       200:
+ *       '200':
  *         description: User updated successfully
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/User'
- *       500:
+ *       '404':
+ *         description: User not found.
+ *       '422':
+ *         description: Authorization errors.
+ *       '500':
  *         description: Internal Server Error
  */
-router.put(
-    '/users/:id',
-    // [    check('role').isIn(['ADMIN']).withMessage('Invalid role')], 
+router.put('/users/:id',
+    checkRoles(['ADMIN']),
     UserController.updateUser);
+
 /**
  * @swagger
  * /auth/users/{id}:
  *   delete:
  *     summary: Delete a user by ID
  *     tags: [Users]
+ *     description: Endpoint requires authentication, access only for user ADMIN
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
- *         description: ID of the user to retrive
+ *         description: ID of the user to deleted
  *         schema:
  *          type: string
  *     responses:
- *       200:
+ *       '200':
  *         description: The user object
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/User'
- *       500:
+ *       '404':
+ *         description: User not found.
+ *       '500':
  *         description: Internal Server Error
  */
-router.delete('/users/:id',[
-    check('role').isIn(['ADMIN']).withMessage('Invalid role')
-], UserController.deleteUser);
-// POST /auth/register - User registration.
-// POST /auth/login - User login to obtain a JWT.
-// GET /auth/users - (Admin only) Fetch a list of users.
-// PUT /auth/users/:id - (Admin only) Update user details.
-// DELETE /auth/user/:id - (Admin only) Delete a user
+router.delete('/users/:id',
+    checkRoles(['ADMIN']),
+    UserController.deleteUser);
+
 export default router;

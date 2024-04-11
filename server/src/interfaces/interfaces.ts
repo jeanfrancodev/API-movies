@@ -4,10 +4,11 @@ export interface IMovie {
   synopsis: string;
   trailer:string;
   studios: string;
-  year: number;
+  year: string;
   duration: string;
-  genres: string;
+  genre: Array<string>;
   image?: string;
+  ageClassification:number
 }
 
 export interface IUser {
@@ -22,4 +23,12 @@ export interface IUser {
 export enum UserRole {
   USER = 'USER',
   ADMIN = 'ADMIN'
+}
+
+export interface IRate {
+  id: number;
+  stars: number;
+  comment: string;
+  movie: number;
+  author: number;
 }

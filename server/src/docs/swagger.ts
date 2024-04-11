@@ -1,30 +1,40 @@
-import {Express} from 'express'
+import { Express } from 'express'
 import swaggerJsdoc, { Options } from 'swagger-jsdoc'
 import swaggerUI from 'swagger-ui-express'
 
-export default function setupSwagger (app: Express) {
+export default function setupSwagger(app: Express) {
   const options: Options = {
     definition: {
       openapi: '3.0.0',
       info: {
         title: 'Api-Movies Documentation ',
-        version: '1.0.0',
+        version: '1.0.0'
       },
-      components:{
-        schemas:{
+      components: {
+        schemas: {
           MovieInput: {
-            type:'object',
+            type: 'object',
             properties: {
-              title: {type: 'string'},
-              synopsis: {type:'string'},
-              trailer:{type:'string'},
-              studios:{type:'string'},
-              year:{type:'number'},
-              duration:{type:'string'},
-              genres:{type:'string'},
-              image:{type:'string'}
+              title: { type: 'string' },
+              synopsis: { type: 'string' },
+              trailer: { type: 'string' },
+              studios: { type: 'string' },
+              year: { type: 'string' },
+              duration: { type: 'string' },
+              genre: { type: 'array', items: { type: 'string' } },
+              image: { type: 'string' },
+              ageClassification: { type: 'number' }
             },
-            required:['title','synopsis','trailer','studios','year','duration','genres']
+            required: [
+              'title',
+              'synopsis',
+              'trailer',
+              'studios',
+              'year',
+              'duration',
+              'genre',
+              'ageClassification'
+            ]
           },
           UserInput: {
             type: 'object',
@@ -38,23 +48,27 @@ export default function setupSwagger (app: Express) {
             },
             required: ['name', 'email', 'password', 'role']
           },
-          // securitySchemes: {
-          //   APIKeyAuth: {
-          //     type: 'apiKey',
-          //     properties:{
-          //       in:'header',
-          //       scheme: 'bearer',
-          //       name: 'X-API-KEY' 
-          //     }
-          //   }      
-          // }
+          RateInput: {
+            type: 'object',
+            properties: {
+              stars: { type: 'number' },
+              comment: { type: 'string' }
+            }
+          }
+        },
+        securitySchemes: {
+          bearerAuth: {
+            type: 'http',
+            scheme: 'bearer',
+            bearerFormat: 'JWT'
+          }
         }
       },
-      security:{
-        ApiKeyAuth: []
+      security: {
+        bearerAuth: []
       }
     },
-    apis: ['./src/**/*.ts'],
+    apis: ['./src/**/*.ts']
   }
   const specs = swaggerJsdoc(options)
   app.use('/api-movies', swaggerUI.serve, swaggerUI.setup(specs))

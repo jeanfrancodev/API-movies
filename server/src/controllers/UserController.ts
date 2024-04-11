@@ -33,7 +33,7 @@ class UserController {
         return res.status(422).json({ errors: errors.array() });
       }
 
-      if (foundUser) { return res.status(400).json({ error: 'User already exists.' }); }
+      if (foundUser) { return res.status(400).json({ error: 'Email has already been registered before.' }); }
 
       let avatar = "default-avatar.png";
 
@@ -71,14 +71,13 @@ class UserController {
   async loginUser(req: Request, res: Response) {
     try {
       const errors = validationResult(req);
-      console.log(errors);
+      
       if (!errors.isEmpty()) {
         return res.status(422).json({ errors: errors.array() });
       }
       const { email, password } = req.body;
 
       const foundUser = await UserModel.findOne({ email });
-      console.log(foundUser);
       
       if (!foundUser) {
         return res.status(404).json({ error: 'User not found.' });
@@ -129,7 +128,6 @@ class UserController {
       user.password = bcrypt.hashSync(password.trim(), 7);
       user.avatar = avatar;
       user.role = role;
-      console.log(user.name);
       
       await user.save();
 
@@ -158,29 +156,6 @@ class UserController {
       return res.status(500).json({ error: 'Internal Server Error.' });
     }
   };
-
-  async searchUsers(req: Request, res: Response) {
-    try {
-      const { query, page = 1, limit = 10 } = req.query as any;
-
-      const regex = new RegExp(query, 'i')
-
-      const users = await UserModel
-        .find({
-          $or: [
-            { name: regex },
-            { email: regex },
-            { role: regex }
-          ]
-        })
-        .skip((page - 1) * limit)
-        .limit(limit)
-
-      return res.json(users);
-    } catch (error) {
-      return res.status(500).json({ error: 'Internal Server Error.' });
-    }
-  }
 }
 
 export default new UserController;

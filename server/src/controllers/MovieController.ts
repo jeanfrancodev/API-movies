@@ -3,33 +3,61 @@ import {validationResult} from 'express-validator'
 import { Request, Response } from "express"
 import dotenv  from "dotenv"
 import MovieModel from "../models/MovieModel.js";
+import UserModel from "../models/UserModel.js";
+import RateModel from "../models/RateModel.js";
+import { loggers } from "winston";
 
 dotenv.config()
 
 class MovieController {
   async getAllMovies(req:Request,res:Response){
     try {
-      const movies = await MovieModel.find()
+      const movies = await MovieModel.find().populate({
+        path: 'rates',
+        populate: {
+          path: 'author',
+          select: {
+            '_id': 1,
+            'name': 1,
+            'avatar': 1,
+          }
+        }
+      }).exec();
+       
       return res.json(movies) 
       
     } catch (error) {
       return res.status(500).json({error:'internal Server error.'})
     }
   };
-  async getMovieById(req:Request,res:Response){
+  async searchMovies(req: Request, res: Response) {
     try {
-      const movie = await MovieModel.findById(req.params.id)
-      if(!movie){
-       return res.status(404).json({error:'Movie not found'});
-      } 
-      return res.json(movie)
+      const { search, page = 1, limit = 10 } = req.query as any;
+            
+      const regex = {
+        $regex: search,
+        $options: 'i'
+      }
+      
+      const movies = await MovieModel
+        .find({
+          $or: [
+            { title: regex },
+            { year: regex },
+            { genre: regex }
+          ]
+        })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        
+      return res.status(200).json(movies);
     } catch (error) {
-      return res.status(500).json({error:'internal Server error.'})
+      return res.status(500).json({ error: 'Internal Server Error.' })
     }
-  };
+  }
   async registerMovie(req: Request, res: Response) {
     try {
-      const { title, synopsis,trailer, studios, year, duration,genres } = req.body;
+      const { title, synopsis,trailer, studios, year, duration,genre,ageClassification } = req.body;
 
       const foundTitle = await MovieModel.findOne({ title })
       const foundTrailer = await MovieModel.findOne({ trailer })
@@ -57,8 +85,9 @@ class MovieController {
         studios,
         year,
         duration,
-        genres, 
-        image
+        genre, 
+        image,
+        ageClassification
       });
       
       await newMovie.save()
@@ -71,8 +100,9 @@ class MovieController {
         studios,
         year,
         duration,
-        genres, 
-        image
+        genre, 
+        image,
+        ageClassification
       });   
     } catch (error) {
       return res.status(500).json({error: 'Internal Server Error.'})      
@@ -83,7 +113,7 @@ class MovieController {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {return res.status(422).json({ errors: errors.array() }); }
       
-      const { title, synopsis,trailer, studios, year, duration,genres } = req.body;
+      const { title, synopsis,trailer, studios, year, duration,genre,ageClassification } = req.body;
       const movie = await MovieModel.findById(req.params.id)
 
       if (!movie) { return res.status(404).json({ error: 'Movie not found.' }); }
@@ -103,7 +133,8 @@ class MovieController {
       movie.studios= studios,
       movie.year= year,
       movie.duration= duration,
-      movie.genres= genres
+      movie.genre= genre
+      movie.ageClassification = ageClassification
 
       await movie.save();
 
@@ -129,5 +160,43 @@ class MovieController {
       return res.status(500).json({error:'internal Server error.'})
     }
   };
+  async moviesRate(request: Request, res: Response){
+    try {
+      const movie = await MovieModel.findById(request.params.id)
+      if (!movie) { return res.status(404).json({ error: 'Movie not found.' }); }
+      
+      const user = await UserModel.findById(request.user_id) 
+      if (!user) { return res.status(404).json({ error: 'User not found.' }); }
+      
+      const { comment, stars } = request.body
+
+      const newAvaliation = await new RateModel({
+        comment,
+        stars,
+        author: user._id,
+        movie: movie._id
+      }).save();
+
+      const filter = {
+        _id: request.params.id
+      }
+
+      const update = {
+        $push: { rates: newAvaliation }
+      }
+      await MovieModel.findOneAndUpdate(filter,update)
+      
+      return res.status(201).json({
+        comment,
+        stars,
+        userId: user._id,
+        movieId: movie._id,
+      })
+    } catch (error) {
+      
+      return res.status(500).json({error:'internal Server error.'})
+    }
+  }
 }
+
 export default new MovieController
